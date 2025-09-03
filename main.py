@@ -236,7 +236,7 @@ def aprs_send(lat_str, lon_str, alt, sat, temp, hum, symbol, tarih, saat):
         sck.connect(addr)
         login_str = "user {} pass {} vers RaspberryPi_Pico-W 1.0\n".format(CALLSIGN, PASSCODE)
         sck.send(login_str.encode())
-        packet = "{}>APRPI,TCPIP*:{}\n".format(CALLSIGN, pkt)
+        packet = "{}>APRPI0,TCPIP*:{}\n".format(CALLSIGN, pkt)
         sck.send(packet.encode())
         print("Paket gönderildi:", packet)
         blink(15,0.05,0.05)
