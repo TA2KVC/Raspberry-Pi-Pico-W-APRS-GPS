@@ -9,11 +9,11 @@ Raspberry Pi PicoW APRS GPS Tracker MicroPython/Python
 * DHT-11 Sıcaklık/Nem sensörü
 * BMP280 Basınç Sensörü
 
-![TA2KVC_PicoAPRS (4)](https://github.com/user-attachments/assets/3b9cc8b4-777f-486a-b6fa-0b09f00ebb00)
-![TA2KVC_PicoAPRS (3)](https://github.com/user-attachments/assets/c4b738f5-9166-458e-aa78-b510c6f12095)
-![TA2KVC_PicoAPRS (2)](https://github.com/user-attachments/assets/9767e0c2-45e6-436f-b716-557ebc2b0c23)
-![TA2KVC_PicoAPRS (1)](https://github.com/user-attachments/assets/d22310fd-9896-4a3a-8692-20a508527a92)
-
+![TA2KVC_PicoW_APRS (5)](https://github.com/user-attachments/assets/077d5239-f547-4071-a7ad-e0a9b294487e)
+![TA2KVC_PicoW_APRS (3)](https://github.com/user-attachments/assets/61cddf2e-778b-493b-b20a-5e31f77c3164)
+![TA2KVC_PicoW_APRS (4)](https://github.com/user-attachments/assets/055a22d7-c92a-42a2-b165-0f2de8b4ab38)
+![TA2KVC_PicoW_APRS (2)](https://github.com/user-attachments/assets/18607421-5b97-4dc5-a1a9-7179e6fcce34)
+![TA2KVC_PicoW_APRS (1)](https://github.com/user-attachments/assets/6fb9c0a9-00eb-4dd6-a01a-ffe4d4fbedd2)
 
 
 
