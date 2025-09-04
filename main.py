@@ -1,30 +1,33 @@
 import machine, network, socket, utime, dht, os
 from volkan5110 import PCD8544_FB
-from machine import Pin, UART, ADC, SPI, SoftI2C
+from machine import Pin, UART, ADC, SPI, I2C
 from micropyGPS import MicropyGPS
 import ntptime
+import bmp281
 
 print("TA2KVC Raspberry Pi Pico W - GY-NEO7M GPS - APRS Sistemi")
 
 # ========= AYARLAR =========
 WIFI_SSID = 'Droid'
-WIFI_PASS = 'VOLKAN'
-CALLSIGN = 'XX0XXX'
-PASSCODE = 'xxxxx'
+WIFI_PASS = 'XXXXXXXX012345'
+CALLSIGN = 'XXXXXX-X'
+PASSCODE = '01234'
 MACHINE_NAME = 'RaspberryPi_Pico-W'
 APRS_SERVER = "euro.aprs2.net"
 APRS_PORT = 14580
-DEFAULT_LAT = 40.xxxxx
-DEFAULT_LON = 32.xxxxx
+DEFAULT_LAT = 40.XXXXX
+DEFAULT_LON = 32.XXXXX
 LAST_GPS_FILE = "last_gps.txt"
 APRS_COUNT_FILE = "aprs_count.txt"
 
-# Sensör Ayarları
+# Sensör Ayarları:
 led = Pin("LED", Pin.OUT)
 uart = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1))
 gps = MicropyGPS()
 temp_sensor = ADC(4)
 dht_sensor = dht.DHT11(machine.Pin(15))
+i2c = I2C(0, scl=Pin(17) , sda=Pin(16))
+bmpsensor = bmp281.BMP280(i2c)
 gps_locked = False
 
 # --- Nokia 5110 LCD ---
@@ -35,19 +38,19 @@ cs = Pin(13)
 rst = Pin(12)
 lcd = PCD8544_FB(spi, cs, dc, rst)
 
+
 def nokia():
     lcd.fill(0)
-    lcd.draw_text(10, 0, "* TA2KVC *", color=1)
-    lcd.draw_text(0,16,"Raspberry Pi")
-    lcd.draw_text(0,24,"Pico W APRS")
-    lcd.draw_text(0,40,"TA2KVC VOLKAN")
+    lcd.text("* TA2KVC *",0,0)
+    lcd.draw_text(7,16,"Raspberry Pi")
+    lcd.draw_text(10,24,"Pico W APRS")
+    lcd.text("* VOLKAN *",0,40)
     lcd.show()
-    utime.sleep(2)
+    utime.sleep(3)
     lcd.clear()
     
 # --- Wi-Fi ---
 def wifi_connect():
-    nokia()
     sta = network.WLAN(network.STA_IF)
     if not sta.active():
         sta.active(True)
@@ -55,7 +58,8 @@ def wifi_connect():
         print("Wi-Fi bağlanıyor...")
         sta.connect(WIFI_SSID, WIFI_PASS)
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
+        #lcd.draw_text(10,0,"* TA2KVC *")
         lcd.draw_text(30,16,"WIFI")
         lcd.draw_text(5,32,"Baglaniyor...")
         lcd.show()
@@ -71,7 +75,7 @@ def wifi_connect():
         print("SSID:", WIFI_SSID)
         print("IP  :", ip)
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
         lcd.draw_text(0,8,"WIFI Baglandi!")
         lcd.draw_text(0,16,"SSID: "+WIFI_SSID)
         lcd.draw_text(0,24,"IP verildi: ")
@@ -109,7 +113,7 @@ def read_dht11(retry=3, delay=2):
             if not DHTerror_printed:
                 print("DHT11 okuma hatası:", e)
                 lcd.fill(0)
-                lcd.draw_text(10,0,"* TA2KVC *")
+                lcd.text("* TA2KVC *",0,0)
                 lcd.draw_text(0,16,"DHT-11")
                 lcd.draw_text(0,24,"Sensor")
                 lcd.draw_text(0,32,"HATASI!")
@@ -141,7 +145,7 @@ def save_last_gps(lat, lon, alt):
         lat == 0.0 or lon == 0.0 or alt == 0.0):
         print("Geçersiz GPS verisi, kayıt yapılmadı.")
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
         lcd.draw_text(0,16,"Gecersiz")
         lcd.draw_text(0,24,"GPS Verisi")
         lcd.draw_text(0,32,"Kayıt")
@@ -157,7 +161,7 @@ def save_last_gps(lat, lon, alt):
     except Exception as e:
         print("GPS konumu kaydedilemedi:", e)
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
         lcd.draw_text(0,16,"GPS Verisi")
         lcd.draw_text(0,24,"Kaydedilemedi:")
         lcd.show()
@@ -172,6 +176,13 @@ def read_aprs_count():
 def save_aprs_count(count):
     with open(APRS_COUNT_FILE,'w') as f: f.write(str(count))
 
+
+def readbmp():
+    bmpsicaklik = round(bmpsensor.temperature(),1)
+    bmpbasinc = round(bmpsensor.pressure()/100,1)
+    bmpyukseklik = round(bmpsensor.altitude(),1)
+    return bmpsicaklik, bmpbasinc, bmpyukseklik
+    
 # --- LED ---
 def blink(times=15, t_on=0.1, t_off=0.1):
     for _ in range(times):
@@ -208,7 +219,7 @@ def format_aprs(lat, lat_dir, lon, lon_dir):
     lon_str = "{:03d}{:05.2f}{}".format(lon_dd, lon_mm, lon_dir)
     return lat_str, lon_str
 
-# --- Tarih ve saat alma (saniye yok) ---
+# --- Tarih ve saat (saniye yok) ---
 def get_date_time_from_gps_or_ntp(gps_timestamp=None):
     try:
         if gps_timestamp is not None:
@@ -228,13 +239,13 @@ def get_date_time_from_gps_or_ntp(gps_timestamp=None):
         return tarih, saat
 
 # --- APRS gönderimi ---
-def aprs_send(lat_str, lon_str, alt, sat, temp, hum, symbol, tarih, saat):
+def aprs_send(lat_str, lon_str, alt, sat, temp, hum, symbol, bmpbasinc, tarih, saat):
     try:
-        pkt = f"!{lat_str}/{lon_str}{symbol} TA2KVC Raspberry Pi Pico APRS Tarih:{tarih} Saat:{saat} Yükselti:{alt}m GPS Uydu:{sat} Sıcaklık:{temp}°C Nem: %{hum}"
+        pkt = f"!{lat_str}/{lon_str}{symbol} TA2KVC Raspberry Pi Pico APRS Tarih:{tarih} Saat:{saat} Yükselti: {alt}m GPS Uydu:{sat} Sıcaklık: {temp}°C Nem: %{hum} Basınç: {bmpbasinc} hPa"
         addr = socket.getaddrinfo(APRS_SERVER, APRS_PORT)[0][-1]
         sck = socket.socket()
         sck.connect(addr)
-        login_str = "user {} pass {} vers RaspberryPi_Pico-W 1.0\n".format(CALLSIGN, PASSCODE)
+        login_str = "user {} pass {} vers TA2KVC_Pico-W 2.0\n".format(CALLSIGN, PASSCODE)
         sck.send(login_str.encode())
         packet = "{}>APRPI0,TCPIP*:{}\n".format(CALLSIGN, pkt)
         sck.send(packet.encode())
@@ -244,19 +255,18 @@ def aprs_send(lat_str, lon_str, alt, sat, temp, hum, symbol, tarih, saat):
     except Exception as e:
         print("APRS hata:", e)
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
         lcd.draw_text(0,24,"APRS")
         lcd.draw_text(0,32,"HATASI")
         lcd.show()
         utime.sleep(1)
         lcd.clear()
 
-# --- GPS uydu bekleme (tek seferlik mesaj) ---
+# --- GPS uydu fix bekle ---
 def wait_gps_lock(timeout_min=3):
     start_time = utime.time()
     waiting_printed = False
     dots = 0
-    #gps_reported = False
     while (utime.time() - start_time) < timeout_min * 60:
         if uart.any():
             for b in uart.read():
@@ -268,10 +278,12 @@ def wait_gps_lock(timeout_min=3):
             lon_dir = gps.longitude[2]
             alt = gps.altitude
             sat = gps.satellites_in_use
+            speed_ms = gps.speed[0] if gps.speed[0] is not None else 0
+            speed_kmh = gps.speed[1] if gps.speed[1] is not None else 0
             hour, minute, second = gps.timestamp[0], gps.timestamp[1], gps.timestamp[2]
             day, month, year = gps.date[0], gps.date[1], gps.date[2]
             hour = (hour + 3) % 24  # Türkiye saati
-            return lat, lat_dir, lon, lon_dir, sat, alt, (hour, minute, second, day, month, year)
+            return lat, lat_dir, lon, lon_dir, sat, alt, speed_ms, speed_kmh, (hour, minute, second, day, month, year)
         else:
             if not waiting_printed:
             #if dots == 0:
@@ -279,7 +291,7 @@ def wait_gps_lock(timeout_min=3):
                 waiting_printed = True
 
             lcd.fill(0)
-            lcd.draw_text(10,0,"* TA2KVC *")
+            lcd.text("* TA2KVC *",0,0)
             lcd.draw_text(30,16,"GPS")
             lcd.draw_text(20,24,"Uydusu")
             if dots == 0:
@@ -294,14 +306,13 @@ def wait_gps_lock(timeout_min=3):
             lcd.show()
             utime.sleep(0.5)
             dots = (dots + 1) % 4
-            #waiting_printed = True
-            #utime.sleep(3)
-            #lcd.clear()
     print("Uyduya bağlanılamadı, default konum kullanılıyor")
     lt, ln, alt = read_last_gps()
     return lt, 'N', ln, 'E', 0, alt, None
 
+
 # --- Ana Döngü ---
+nokia()
 wifi_connect()
 print("Sistem Hazır")
 lcd.draw_text(0,40,"Sistem HAZIR!")
@@ -315,10 +326,11 @@ lcd.fill(0)
 
 while True:
     try:
-        lat, lat_dir, lon, lon_dir, sat, alt, gps_timestamp = wait_gps_lock(3)
+        lat, lat_dir, lon, lon_dir, sat, alt, speed_ms, speed_kmh, gps_timestamp = wait_gps_lock(3)
         symbol = aprs_symbol(last_lat, last_lon, lat, lon)
         lat_aprs, lon_aprs = format_aprs(lat, lat_dir, lon, lon_dir)
         send_period = get_send_period(last_lat, last_lon, lat, lon)
+        bmpsicaklik, bmpbasinc, bmpyukseklik = readbmp()
         save_last_gps(lat, lon, alt)
         try:
             temp, hum = read_dht11()
@@ -329,33 +341,52 @@ while True:
         
         # --- LCD Güncelle ---
         lcd.fill(0)
-        lcd.draw_text(0,0,f"Lat: {(lat_aprs)}")
-        lcd.draw_text(0,8,f"Lon: {(lon_aprs)}")
-        lcd.draw_text(0,16,f"GPS Fix:{(sat)} Uydu")
-        lcd.draw_text(0,24,f"T: {temp}°C N: %{hum}")
-        lcd.draw_text(0,32,f"Pac:{(aprs_count)}  F:{(send_period)}")
-        lcd.draw_text(0,40,f"Saat:{saat}")
-        lcd.draw_text_mini(65,42,f"{tarih}")
+        lcd.draw_text(0,0,f"LAT: {str(lat_aprs[:-1])} {(lat_aprs[-1])}")
+        lon_val = lon_aprs[:-1]          # sayısal kısım (örn. 03237.45)
+        lon_val = lon_val[1:] if lon_val.startswith("0") else lon_val
+        lon_dir = lon_aprs[-1]           # yön harfi (E/W)
+        lcd.draw_text(0,8,f"LON: {lon_val} {lon_dir}")
+        lcd.draw_text(0,16,f"ALT: {int(alt)} metre")
+        lcd.draw_text(0,24,f"GPS: {(sat)} Uydu")
+        lcd.draw_text(0,32,f"ISI: {temp}°C")
+        lcd.draw_text(0,40,f"NEM: %{hum}")
         lcd.show()
         
         if sat > 0 and not gps_locked:
             print(f"GPS uydusuna bağlandı! Uydu sayısı: {sat}")
             gps_locked = True
         if utime.time() - last_send > send_period:
-            aprs_send(lat_aprs, lon_aprs, alt, sat, temp, hum, symbol, tarih, saat)
+            aprs_send(lat_aprs, lon_aprs, alt, sat, temp, hum, symbol, bmpbasinc, tarih, saat)
             aprs_count += 1
             save_aprs_count(aprs_count)
             last_send = utime.time()
             last_lat = lat
             last_lon = lon
 
-        utime.sleep(3)
+        utime.sleep(15)
         lcd.fill(0)
+        lcd.draw_text(0,0,f"PRS: {(bmpbasinc)} hPa")
+        lcd.draw_text(0,8,f"PKT: {(aprs_count)}")
+        if send_period == 90:
+            lcd.draw_text(0,16,f"SYM: Sabit/90sn")
+        elif send_period == 30:
+            lcd.draw_text(0,16,f"SYM: Yavas/30sn")
+        else:
+            lcd.draw_text(0,16,f"SYM: Araba/15sn")
+        if speed_ms < 100:
+            speed_text = f"HIZ: {round(speed_ms,1)} m/s"
+        else:
+            speed_text = f"HIZ: {int(speed_kmh)} km/s"
+        lcd.draw_text(0,24,speed_text)
+        lcd.draw_text(0,32,f"UTC: {saat}")
+        lcd.draw_text(0,40,f"DAT: {tarih}")
+        lcd.show()
+        utime.sleep(10)
         
     except Exception as e:
         print("Ana döngü hatası:", e)
         lcd.fill(0)
-        lcd.draw_text(10,0,"* TA2KVC *")
+        lcd.text("* TA2KVC *",0,0)
         lcd.draw_text(10,16,"ANA DONGU")
         lcd.draw_text(20,24,"HATASI:")
         lcd.draw_text(0,32, str(e))
