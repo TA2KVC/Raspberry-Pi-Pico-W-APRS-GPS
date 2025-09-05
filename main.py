@@ -373,7 +373,7 @@ while True:
             lcd.draw_text(0,16,f"SYM: Yavas/30sn")
         else:
             lcd.draw_text(0,16,f"SYM: Araba/15sn")
-        if speed_ms < 100:
+        if speed_ms < 5:
             speed_text = f"HIZ: {round(speed_ms,1)} m/s"
         else:
             speed_text = f"HIZ: {int(speed_kmh)} km/s"
